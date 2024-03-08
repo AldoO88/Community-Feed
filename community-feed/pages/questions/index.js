@@ -1,7 +1,7 @@
-import { useState, useEffect } from "react";
+
 import styled from "styled-components";
 import Link from "next/link";
-import { useRouter } from "next/router";
+import Head from "next/head";
 import Card from "../../components/Card";
 import Pagination from "../../components/Pagination";
 
@@ -16,36 +16,18 @@ const CardLink = styled.span`
     text-decoration: none;
 `;
 
-const Questions =  () => {
+const Questions =  ({questions, hasMore, page}) => {  
 
-    const [loading, setLoading] = useState(false);
-    const [questions, setQuestions] = useState([]);
-    const [hasMore, setHasMore] = useState(false);
-    const router = useRouter();
-    const { page } = router.query;
-
-    useEffect(() => {
-        async function fetchData(){
-            const data = await fetch(`https://api.stackexchange.com/2.2/questions?${page ? `page=${page}&` : ''}order=desc&sort=hot&tagged=reactjs&site=stackoverflow`);
-            const result = await data.json();
-            if(result){
-                setQuestions(result.items);
-                setHasMore(result.has_more);
-                setLoading(false);
-            }
-        }
-        fetchData();
-    }, [page]);
     
     return (
+        <>
+        <Head>
+            <title>Questions</title>
+        </Head>
         <QuiestionContainer>
             <h2>Questions</h2>
-            {loading ? (
-                    <span>loading...</span>
-                ) : (
-                    <>
                     <div>
-                        {questions.map((question) => (
+                        {questions && questions.map((question) => (
                                 <Link
                                     key={question.question_id}
                                     href={`/questions/${question.question_id}`}
@@ -61,12 +43,25 @@ const Questions =  () => {
                         ))}
                     </div>
                     <Pagination currentPage={parseInt(page) || 1} hasMore={hasMore} />
-                    </>
-                )
-            }
+                    
         </QuiestionContainer>
+        </>
     );
 }
 
+ export const getServerSideProps = async (context) =>{
+    const { page } =  context.query;
+    const data = await fetch(`https://api.stackexchange.com/2.2/questions?${
+        page ? `page=${page}&` : ''
+      }order=desc&sort=hot&tagged=reactjs&site=stackoverflow`,);
+      const result = await data.json();
+      return{
+        props: {
+            questions: result.items,
+            hasMore: result.has_more,
+            page: page || 1,
+        }
+      };
+}
 
 export default Questions;
